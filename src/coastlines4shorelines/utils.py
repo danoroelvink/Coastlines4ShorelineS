@@ -1,6 +1,8 @@
 import geopandas as gpd
 import pandas as pd
 import shapely
+import pystac
+import dask_geopandas
 from shapely.geometry import LineString
 from dask.dataframe.utils import make_meta
 from coastmonitor.io.utils import read_items_extent

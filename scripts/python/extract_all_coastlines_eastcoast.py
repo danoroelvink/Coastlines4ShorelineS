@@ -6,11 +6,8 @@
 # 
 import sys
 
-sys.path.insert(0, "../src")
-
-from coastmonitor.io.drive_config import configure_instance
-
-configure_instance(branch="dev")
+sys.path.insert(0, r"d:\Documents\GitHub\Coastlines4ShorelineS\src")
+from coastlines4shorelines.utils import transect_origins_to_coastline
 
 import logging
 import os
@@ -85,38 +82,6 @@ import pandas as pd
 import shapely
 from shapely.geometry import LineString
 
-
-def transect_origins_to_coastline(df):
-    # Ensure df is sorted if not already
-    df = df.sort_values(by=["tr_name", "segment_id", "transect_id"])
-
-    # Identify partitions by checking where the difference in transect_id is not 100
-    # diff() is NaN for the first row, so we use fillna() to set it to a value that does not equal 100 (e.g., 0)
-    df["partition"] = (df["transect_id"].diff().fillna(0) != 100).cumsum()
-
-    lines = []
-    for _, partition_df in df.groupby("partition"):
-        if len(partition_df) > 1:
-            coords = gpd.GeoSeries.from_xy(
-                partition_df["lon"], partition_df["lat"]
-            ).to_list()
-
-            # Check if the coastline is closed and this is the only partition
-            if (
-                partition_df.coastline_is_closed.iloc[0]
-                and len(df["partition"].unique()) == 1
-            ):
-                coords.append(
-                    coords[0]
-                )  # Add the first point at the end to close the loop
-
-            lines.append(LineString(coords))
-        # Else case can be added if needed to handle single-point partitions
-
-    return pd.Series(lines)
-
-
-# ]
 # ## Plus we can handle region of interests that do not span all coastlines
 
 # 
@@ -125,7 +90,7 @@ fiona.drvsupport.supported_drivers["KML"] = "rw"
 import os   
 from pathlib import Path                                                                
 import glob  
-maindir = r"d:\FHICS\ShorelineS\ROI"  
+maindir = r"d:\FHICS\ShorelineS\ROIs"  
 outdir = r"d:\FHICS\ShorelineS\shapefiles"                                                             
 os.chdir(maindir)       
 for file in glob.iglob('*.kml'):                           
@@ -145,7 +110,6 @@ for file in glob.iglob('*.kml'):
     transects = dask_geopandas.read_parquet(hrefs, storage_options=storage_options)
     transects
     # 
-    transects = dask_geopandas.read_parquet(hrefs, storage_options=storage_options)
     transects_roi = (
         transects.sjoin(roi.to_crs(transects.crs))
         .drop(columns=["index_right", "Name"])
