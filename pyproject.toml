@@ -2,7 +2,7 @@
 name = "coastlines4shorelines"
 version = "0.1.0"
 description = ""
-authors = ["Dano Roelvink"]
+authors = ["Dano Roelvink", "Floris Calkoen"]
 license = "MIT"
 readme = "README.md"
 
