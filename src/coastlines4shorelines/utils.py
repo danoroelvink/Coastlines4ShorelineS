@@ -1,9 +1,15 @@
+import dask
 import geopandas as gpd
 import pandas as pd
-import shapely
-from shapely.geometry import LineString
-from dask.dataframe.utils import make_meta
+
+dask.config.set({"dataframe.query-planning": False})
+
+import dask_geopandas
+import pystac
 from coastmonitor.io.utils import read_items_extent
+from dask.dataframe.utils import make_meta
+from shapely.geometry import LineString
+
 
 def transect_origins_to_coastline(df):
     # Ensure df is sorted if not already
@@ -76,3 +82,4 @@ def retrieve_transects_by_roi(roi, storage_options=None):
         {"coastline_id": int, "segment_id": int, "transect_id": int}
     )
     return transects_roi
+
