@@ -10,6 +10,34 @@ from coastmonitor.io.utils import read_items_extent
 from dask.dataframe.utils import make_meta
 from shapely.geometry import LineString
 
+def filter_sp(sp_raw):
+    """
+    Function to filter shorelines with specified filtering indicator.
+    """
+
+    # set up the indicators
+    # `sp_clean` will include only shoreline positions that satisfy the indicators
+    sp_clean = sp_raw[
+        (sp_raw.sh_sinuosity < 10)
+        & (~sp_raw.obs_on_shoal)
+        & (sp_raw.obs_is_primary)
+        & (sp_raw.tr_is_qa)
+        & (sp_raw.mdn_offset < 3 * sp_raw.tr_stdev)
+        & (sp_raw.obs_count >= 5)
+        & (~sp_raw.obs_is_outlier)
+    ].copy()
+
+    # set up the `sp_clean` table
+    sp_clean = (
+        sp_clean[
+            ["time", "tr_name", "shoreline_position_trans", "geometry"]
+        ]  # columns to be included in the clean tables
+        .rename(columns=({"shoreline_position_trans": "shoreline_position"}))
+        .reset_index(drop=True)
+    )
+
+    return sp_clean
+
 def shoreline_intersections_to_coastline(df):
  
     # Ensure df is sorted if not already
