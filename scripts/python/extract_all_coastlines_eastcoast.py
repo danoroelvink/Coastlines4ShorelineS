@@ -83,6 +83,9 @@ from pathlib import Path
 
 maindir = r"d:\FHICS\ShorelineS\ROIs"
 outdir = r"d:\FHICS\ShorelineS\shapefiles"
+if not os.path.exists(outdir):
+    os.makedirs(outdir)
+    
 os.chdir(maindir)
 for file in glob.iglob('*.kml'):
     print(file)
@@ -131,7 +134,7 @@ for file in glob.iglob('*.kml'):
     #
     m = roi.explore()
     #gpd.GeoDataFrame(coastline, crs=4326).explore(color="red", m=m)
-    gpd.GeoDataFrame(coastline).explore().save(os.path.join(maindir,root+".html"))
+    gpd.GeoDataFrame(coastline).explore().save(os.path.join(outdir,root+".html"))
     #
     coastline_UTM=coastline.to_crs(26918)
     coastline_UTM.head
