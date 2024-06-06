@@ -10,6 +10,26 @@ from coastmonitor.io.utils import read_items_extent
 from dask.dataframe.utils import make_meta
 from shapely.geometry import LineString
 
+def shoreline_intersections_to_coastline(df):
+ 
+    # Ensure df is sorted if not already
+    df = df.sort_values(by=["tr_name", "segment_id", "transect_id"])
+
+    # Identify partitions by checking where the difference in transect_id is not 100
+    # diff() is NaN for the first row, so we use fillna() to set it to a value that does not equal 100 (e.g., 0)
+    df["partition"] = (df["transect_id"].diff().fillna(0) != 100).cumsum()
+
+    lines = []
+    for _, partition_df in df.groupby("partition"):
+        if len(partition_df) > 1:
+            coords = gpd.GeoSeries.from_xy(
+                partition_df["lon"], partition_df["lat"]
+            ).to_list()
+
+            lines.append(LineString(coords))
+        # Else case can be added if needed to handle single-point partitions
+
+    return pd.Series(lines)
 
 def transect_origins_to_coastline(df):
     # Ensure df is sorted if not already
