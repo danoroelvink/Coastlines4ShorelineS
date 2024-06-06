@@ -30,7 +30,7 @@ def filter_sp(sp_raw):
     # set up the `sp_clean` table
     sp_clean = (
         sp_clean[
-            ["time", "tr_name", "shoreline_position_trans", "geometry"]
+            ["time", "tr_name", "lon","lat","shoreline_position_trans", "geometry"]
         ]  # columns to be included in the clean tables
         .rename(columns=({"shoreline_position_trans": "shoreline_position"}))
         .reset_index(drop=True)
