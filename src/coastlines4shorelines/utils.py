@@ -92,13 +92,30 @@ def retrieve_transects_by_roi(roi, storage_options=None):
     coclico_catalog = pystac.Catalog.from_file(
         "https://coclico.blob.core.windows.net/stac/v1/catalog.json"
     )
-    gcts_collection = coclico_catalog.get_child("gcts")
+    gcts_collection = coclico_catalog.get_child("gctr")
     gcts_extents = read_items_extent(
         gcts_collection, columns=["geometry", "assets"], storage_options=storage_options
     )
     hrefs = gpd.sjoin(gcts_extents, roi).drop(columns=["index_right"]).href.to_list()
 
-    transects = dask_geopandas.read_parquet(hrefs, storage_options=storage_options)
+    TRANSECT_COLUMNS = [
+        "tr_name",
+        "lon",
+        "lat",
+        "bearing",
+        "geometry",
+        "coastline_is_closed",
+        "coastline_length",
+        "utm_crs",
+        "bbox",
+        "quadkey",
+        "country",
+        "common_country_name",
+        "dist_b0",
+        "dist_b30",
+        "dist_b330",
+    ]
+    transects = dask_geopandas.read_parquet(hrefs, storage_options=storage_options, columns=TRANSECT_COLUMNS)
     transects_roi = (
         transects.sjoin(roi.to_crs(transects.crs))
         .drop(columns=["index_right"])
