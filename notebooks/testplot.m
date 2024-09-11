@@ -2,7 +2,7 @@ clear all;close all
 nmin=30;
 lon=ncread("test.nc",'lon');
 lat=ncread("test.nc",'lat');
-%% 
+%%
 ok=sum(isnan(lon),2)<nmin;
 lon=lon(ok,:);
 lat=lat(ok,:);

@@ -1,7 +1,7 @@
 # %% [markdown]
-# # Examples how to work with Global Coastal Transect System 
-# 
-# Run the first few cells to load required functions and jump to the section you're interested in afterwards. 
+# # Examples how to work with Global Coastal Transect System
+#
+# Run the first few cells to load required functions and jump to the section you're interested in afterwards.
 
 # %%
 import sys
@@ -45,8 +45,8 @@ storage_options
 
 # %% [markdown]
 # ## Load from STAC catalog
-# 
-# Load the transects from our CoCliCo STAC catalog. 
+#
+# Load the transects from our CoCliCo STAC catalog.
 
 # %%
 coclico_catalog = pystac.Catalog.from_file(
@@ -65,11 +65,11 @@ gcts
 
 # %% [markdown]
 # ### Use a dynamic map to extract data by region of interest
-# 
+#
 # The IPyleaflet map below can be used to find the bbox coordinates of a certain region.
 # Zoom to the area where you want to extract data and run the next cell. Please keep in
 # mind to wait 1 second because the map has to be rendered before the coordinates can be
-# extracted. 
+# extracted.
 
 # %%
 m = Map(basemap=basemaps.Esri.WorldImagery, scroll_wheel_zoom=True)
@@ -80,7 +80,7 @@ m
 
 # %% [markdown]
 # ## IMPORTANT NOTE: Wait for the map to render before you run the next cell
-# 
+#
 # rendering the map takes a second, so you need to pause 1 second before running the next cell otherwise you cannot parse the north/west/east/south bounds
 
 # %%
@@ -93,7 +93,7 @@ items = list(gcts.get_all_items())
 
 # %% [markdown]
 # ## The dataset is partitioned into geospatial chunks
-# 
+#
 # The dataset is divided into different chunks, that each span a different region of the world. In the next cell
 # we read the spatial extends of each chunk and compose that into a GeoDataFrame
 
@@ -123,20 +123,20 @@ hrefs = [i.assets["data"].href for i in items_roi]
 
 # %% [markdown]
 # ## Cloud based data
-# 
+#
 # The href that you see below is a url to a cloud bucket with the transects for the area of interest. The prefix "az://" is the protocol for Azure cloud storage.
 
 # %%
 hrefs
 
 # %% [markdown]
-# ## Reading the transect partitions that span our region of interest 
-# 
-# We will read the data from cloud storage - but only the data that spans our region of interest (the DynamicMap above). 
+# ## Reading the transect partitions that span our region of interest
+#
+# We will read the data from cloud storage - but only the data that spans our region of interest (the DynamicMap above).
 
 # %% [markdown]
 # ## Dask dataframes are lazy
-# 
+#
 # These dataframes are not in memory yet. We still have to trigger the compute (see cell below)
 
 # %%
@@ -144,8 +144,8 @@ dask_geopandas.read_parquet(hrefs, storage_options=storage_options)
 
 # %% [markdown]
 # ## Compute the transects that span our region of interest
-# 
-# The transects are not in memory yet. In the next cell we will trigger the retrieval from cloud storage to local client by doing a `ddf.compute()` call. 
+#
+# The transects are not in memory yet. In the next cell we will trigger the retrieval from cloud storage to local client by doing a `ddf.compute()` call.
 
 # %%
 %%time
@@ -153,18 +153,18 @@ transects = dask_geopandas.read_parquet(hrefs, storage_options=storage_options)
 transects_roi = (
     transects.sjoin(roi.to_crs(transects.crs)).drop(columns=["index_right"]).compute()
 )
-transects_roi = transects_roi.sort_values("tr_name")
+transects_roi = transects_roi.sort_values("transect_id")
 transects_roi[
-    ["coastline_id", "segment_id", "transect_id"]
-] = transects_roi.tr_name.str.extract(r"cl(\d+)s(\d+)tr(\d+)")
+    ["coastline_id", "segment_id", "transect_dist"]
+] = transects_roi.transect_id.str.extract(r"cl(\d+)s(\d+)tr(\d+)")
 transects_roi = transects_roi.astype(
-    {"coastline_id": int, "segment_id": int, "transect_id": int}
+    {"coastline_id": int, "segment_id": int, "transect_dist": int}
 )
 
 # %% [markdown]
 # ## Sorting the transects
-# 
-# Currently the transects are stored by QuadKey to optimize fast read access by filter pushdown. If we want them sorted by the coastline we can do that as follows. 
+#
+# Currently the transects are stored by QuadKey to optimize fast read access by filter pushdown. If we want them sorted by the coastline we can do that as follows.
 
 # %% [markdown]
 # ## Compose the transect origins into coastlines
@@ -178,11 +178,11 @@ from shapely.geometry import LineString
 
 def transect_origins_to_coastline(df):
     # Ensure df is sorted if not already
-    df = df.sort_values(by=["tr_name", "segment_id", "transect_id"])
+    df = df.sort_values(by=["transect_id", "segment_id", "transect_dist"])
 
-    # Identify partitions by checking where the difference in transect_id is not 100
+    # Identify partitions by checking where the difference in transect_dist is not 100
     # diff() is NaN for the first row, so we use fillna() to set it to a value that does not equal 100 (e.g., 0)
-    df["partition"] = (df["transect_id"].diff().fillna(0) != 100).cumsum()
+    df["partition"] = (df["transect_dist"].diff().fillna(0) != 100).cumsum()
 
     lines = []
     for _, partition_df in df.groupby("partition"):
@@ -193,7 +193,7 @@ def transect_origins_to_coastline(df):
 
             # Check if the coastline is closed and this is the only partition
             if (
-                partition_df.coastline_is_closed.iloc[0]
+                partition_df.osm_coastline_is_closed.iloc[0]
                 and len(df["partition"].unique()) == 1
             ):
                 coords.append(
@@ -248,13 +248,13 @@ transects_roi = (
     .compute()
 )
 # to ensure that all transects are sorted along the coastline
-transects_roi = transects_roi.sort_values("tr_name")
+transects_roi = transects_roi.sort_values("transect_id")
 # add the id's
 transects_roi[
-    ["coastline_id", "segment_id", "transect_id"]
-] = transects_roi.tr_name.str.extract(r"cl(\d+)s(\d+)tr(\d+)")
+    ["coastline_id", "segment_id", "transect_dist"]
+] = transects_roi.transect_id.str.extract(r"cl(\d+)s(\d+)tr(\d+)")
 transects_roi = transects_roi.astype(
-    {"coastline_id": int, "segment_id": int, "transect_id": int}
+    {"coastline_id": int, "segment_id": int, "transect_dist": int}
 )
 
 # %%

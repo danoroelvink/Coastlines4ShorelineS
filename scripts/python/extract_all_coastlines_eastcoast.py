@@ -85,21 +85,19 @@ maindir = r"d:\FHICS\ShorelineS\ROIs"
 outdir = r"d:\FHICS\ShorelineS\shapefiles"
 if not os.path.exists(outdir):
     os.makedirs(outdir)
-    
+
 os.chdir(maindir)
-for file in glob.iglob('*.kml'):
+for file in glob.iglob("*.kml"):
     print(file)
     kml_fp = file
 
     root = Path(kml_fp).stem
-
 
     roi = gpd.read_file(kml_fp, driver="KML")
 
     bboxes_roi = gpd.sjoin(bboxes, roi)[bboxes.columns]
     items_roi = [items[i] for i in bboxes_roi.index]
     hrefs = [i.assets["data"].href for i in items_roi]
-
 
     transects = dask_geopandas.read_parquet(hrefs, storage_options=storage_options)
     transects
@@ -110,13 +108,13 @@ for file in glob.iglob('*.kml'):
         .compute()
     )
     # to ensure that all transects are sorted along the coastline
-    transects_roi = transects_roi.sort_values("tr_name")
+    transects_roi = transects_roi.sort_values("transect_id")
     # add the id's
-    transects_roi[
-        ["coastline_id", "segment_id", "transect_id"]
-    ] = transects_roi.tr_name.str.extract(r"cl(\d+)s(\d+)tr(\d+)")
+    transects_roi[["coastline_id", "segment_id", "transect_dist"]] = (
+        transects_roi.transect_id.str.extract(r"cl(\d+)s(\d+)tr(\d+)")
+    )
     transects_roi = transects_roi.astype(
-        {"coastline_id": int, "segment_id": int, "transect_id": int}
+        {"coastline_id": int, "segment_id": int, "transect_dist": int}
     )
 
     #
@@ -127,16 +125,16 @@ for file in glob.iglob('*.kml'):
         .dropna()
         .reset_index()
         .rename(columns={0: "geometry"})
-)
+    )
     coastline = gpd.GeoDataFrame(coastline, crs=4326)
     coastline = gpd.overlay(coastline, roi[["geometry"]]).explode(index_parts=False)
 
     #
     m = roi.explore()
-    #gpd.GeoDataFrame(coastline, crs=4326).explore(color="red", m=m)
-    gpd.GeoDataFrame(coastline).explore().save(os.path.join(outdir,root+".html"))
+    # gpd.GeoDataFrame(coastline, crs=4326).explore(color="red", m=m)
+    gpd.GeoDataFrame(coastline).explore().save(os.path.join(outdir, root + ".html"))
     #
-    coastline_UTM=coastline.to_crs(26918)
+    coastline_UTM = coastline.to_crs(26918)
     coastline_UTM.head
     #
-    coastline_UTM.to_file(os.path.join(outdir,root+".shp"))
+    coastline_UTM.to_file(os.path.join(outdir, root + ".shp"))
